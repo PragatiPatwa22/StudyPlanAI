@@ -1,156 +1,54 @@
-import numpy as np
-import skfuzzy as fuzz
-from skfuzzy import control as ctrl
+def calculate_priority(difficulty, urgency, weakness):
 
+    difficulty = difficulty / 100
+    urgency = urgency / 100
+    weakness = weakness / 100
 
-difficulty = ctrl.Antecedent(
-    np.arange(0, 101, 1),
-    "difficulty"
-)
+    low_difficulty = max(0, 1 - difficulty * 2)
+    medium_difficulty = max(0, 1 - abs(difficulty - 0.5) * 2)
+    high_difficulty = max(0, (difficulty - 0.5) * 2)
 
-urgency = ctrl.Antecedent(
-    np.arange(0, 101, 1),
-    "urgency"
-)
+    low_urgency = max(0, 1 - urgency * 2)
+    medium_urgency = max(0, 1 - abs(urgency - 0.5) * 2)
+    high_urgency = max(0, (urgency - 0.5) * 2)
 
-weakness = ctrl.Antecedent(
-    np.arange(0, 101, 1),
-    "weakness"
-)
+    low_weakness = max(0, 1 - weakness * 2)
+    medium_weakness = max(0, 1 - abs(weakness - 0.5) * 2)
+    high_weakness = max(0, (weakness - 0.5) * 2)
 
-priority = ctrl.Consequent(
-    np.arange(0, 101, 1),
-    "priority"
-)
-
-
-difficulty["low"] = fuzz.trimf(
-    difficulty.universe,
-    [0, 0, 50]
-)
-
-difficulty["medium"] = fuzz.trimf(
-    difficulty.universe,
-    [25, 50, 75]
-)
-
-difficulty["high"] = fuzz.trimf(
-    difficulty.universe,
-    [50, 100, 100]
-)
-
-
-urgency["low"] = fuzz.trimf(
-    urgency.universe,
-    [0, 0, 50]
-)
-
-urgency["medium"] = fuzz.trimf(
-    urgency.universe,
-    [25, 50, 75]
-)
-
-urgency["high"] = fuzz.trimf(
-    urgency.universe,
-    [50, 100, 100]
-)
-
-
-weakness["low"] = fuzz.trimf(
-    weakness.universe,
-    [0, 0, 50]
-)
-
-weakness["medium"] = fuzz.trimf(
-    weakness.universe,
-    [25, 50, 75]
-)
-
-weakness["high"] = fuzz.trimf(
-    weakness.universe,
-    [50, 100, 100]
-)
-
-
-priority["low"] = fuzz.trimf(
-    priority.universe,
-    [0, 0, 40]
-)
-
-priority["medium"] = fuzz.trimf(
-    priority.universe,
-    [25, 50, 75]
-)
-
-priority["high"] = fuzz.trimf(
-    priority.universe,
-    [60, 100, 100]
-)
-
-
-rule1 = ctrl.Rule(
-    difficulty["high"] | urgency["high"] | weakness["high"],
-    priority["high"]
-)
-
-rule2 = ctrl.Rule(
-    difficulty["medium"] & urgency["medium"],
-    priority["medium"]
-)
-
-rule3 = ctrl.Rule(
-    weakness["medium"] & urgency["medium"],
-    priority["medium"]
-)
-
-rule4 = ctrl.Rule(
-    difficulty["low"] & urgency["low"] & weakness["low"],
-    priority["low"]
-)
-
-rule5 = ctrl.Rule(
-    difficulty["low"] & urgency["medium"],
-    priority["medium"]
-)
-
-rule6 = ctrl.Rule(
-    difficulty["medium"] & urgency["high"],
-    priority["high"]
-)
-
-rule7 = ctrl.Rule(
-    difficulty["high"] & weakness["high"],
-    priority["high"]
-)
-
-
-priority_control = ctrl.ControlSystem([
-    rule1,
-    rule2,
-    rule3,
-    rule4,
-    rule5,
-    rule6,
-    rule7
-])
-
-
-def calculate_priority(
-    difficulty_value,
-    urgency_value,
-    weakness_value
-):
-
-    simulation = ctrl.ControlSystemSimulation(
-        priority_control
+    high_priority = max(
+        min(high_difficulty, high_urgency),
+        min(high_urgency, high_weakness),
+        min(high_difficulty, high_weakness)
     )
 
-    simulation.input["difficulty"] = difficulty_value
-    simulation.input["urgency"] = urgency_value
-    simulation.input["weakness"] = weakness_value
+    medium_priority = max(
+        min(medium_difficulty, medium_urgency),
+        min(medium_urgency, medium_weakness),
+        min(medium_difficulty, medium_weakness)
+    )
 
-    simulation.compute()
+    low_priority = min(
+        low_difficulty,
+        low_urgency,
+        low_weakness
+    )
 
-    result = simulation.output["priority"]
+    numerator = (
+        low_priority * 25 +
+        medium_priority * 55 +
+        high_priority * 85
+    )
 
-    return result
+    denominator = (
+        low_priority +
+        medium_priority +
+        high_priority
+    )
+
+    if denominator == 0:
+        return 50
+
+    priority = numerator / denominator
+
+    return max(0, min(100, priority))
